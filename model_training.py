@@ -17,7 +17,6 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
@@ -34,7 +33,9 @@ def load_dataset(path: Path = DATA_PATH) -> Tuple[pd.DataFrame, pd.Series]:
     if not path.exists():
         raise FileNotFoundError(f"Dataset not found at {path}")
 
-    dataset = pd.read_csv(path)
+    dataset = pd.read_csv(path, parse_dates=["date"])  # Ensure chronological sorting works reliably
+
+    dataset = dataset.sort_values("date").reset_index(drop=True)
 
     feature_columns = [
         column
@@ -100,12 +101,14 @@ def train_model() -> dict:
     """Run the training pipeline and return evaluation metrics."""
     features, target = load_dataset()
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        features,
-        target,
-        test_size=0.2,
-        random_state=42,
-    )
+    train_size = int(len(features) * 0.8)
+    if train_size == 0 or train_size == len(features):
+        raise ValueError("Dataset is too small to split into train and test sets.")
+
+    X_train = features.iloc[:train_size]
+    X_test = features.iloc[train_size:]
+    y_train = target.iloc[:train_size]
+    y_test = target.iloc[train_size:]
 
     pipeline = build_pipeline()
     pipeline.fit(X_train, y_train)
