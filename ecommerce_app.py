@@ -12,10 +12,11 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timedelta
+from pathlib import Path
 import random
 import time
 import json
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 # Import our e-commerce data integration
 try:
@@ -26,6 +27,36 @@ try:
     )
 except ImportError:
     st.error("E-commerce data integration module not found. Please ensure ecommerce_data_integration.py is available.")
+
+try:
+    from pricing_model import (
+        PricingModelNotFoundError,
+        REQUIRED_FEATURES as MODEL_REQUIRED_FEATURES,
+        find_model_path,
+        predict_price,
+    )
+    PRICING_MODEL_AVAILABLE = True
+    PRICING_MODEL_ERROR: Optional[str] = None
+except Exception as exc:  # pragma: no cover - defensive fallback for missing optional dependency
+    PRICING_MODEL_AVAILABLE = False
+    PRICING_MODEL_ERROR = str(exc)
+
+    class PricingModelNotFoundError(FileNotFoundError):
+        """Fallback error used when pricing model utilities are unavailable."""
+
+    def find_model_path() -> Optional[Path]:  # type: ignore[override]
+        return None
+
+    def predict_price(_features):  # type: ignore[override]
+        raise RuntimeError(
+            "Pricing model utilities are unavailable. Install dependencies and run model_training.py."
+        )
+
+    MODEL_REQUIRED_FEATURES = ()
+
+# Model feature defaults (derived from dataset statistics)
+DEFAULT_TEMPERATURE_C = 27.67
+DEFAULT_PRCP_MM = 95.40
 
 # Advanced Configuration
 st.set_page_config(
@@ -164,6 +195,92 @@ def create_performance_dashboard(product_data: Dict) -> Dict[str, go.Figure]:
     }
 
 
+def build_model_features(product_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Prepare feature dictionary for the trained ML pricing model."""
+
+    competitor_entries = product_data.get('competitor_pricing', {}) or {}
+    competitor_prices: List[float] = []
+
+    for comp_data in competitor_entries.values():
+        price = comp_data.get('price') if isinstance(comp_data, dict) else comp_data
+        try:
+            if price is not None:
+                competitor_prices.append(float(price))
+        except (TypeError, ValueError):
+            continue
+
+    if not competitor_prices:
+        try:
+            competitor_prices = [float(product_data.get('current_price', 0.0))]
+        except (TypeError, ValueError):
+            competitor_prices = [0.0]
+
+    avg_competitor_price = float(np.mean(competitor_prices)) if competitor_prices else 0.0
+
+    competitor_count_value = product_data.get('competitor_count', len(competitor_prices))
+    try:
+        competitor_count = float(competitor_count_value)
+    except (TypeError, ValueError):
+        competitor_count = float(len(competitor_prices))
+
+    behavior_metrics = product_data.get('customer_behavior', {}).get('behavior_metrics', {})
+    unique_visitors = behavior_metrics.get('unique_visitors', 0)
+    try:
+        total_visitors = float(unique_visitors)
+    except (TypeError, ValueError):
+        total_visitors = 0.0
+
+    seasonal_events = product_data.get('market_data', {}).get('external_factors', {}).get('seasonal_events', [])
+    monthly_event_days = float(min(2.0, len(seasonal_events)))
+
+    weather_info = product_data.get('market_data', {}).get('weather', {}) or {}
+    temperature = weather_info.get('temperature_celsius', DEFAULT_TEMPERATURE_C)
+    precipitation = weather_info.get('prcp_mm', DEFAULT_PRCP_MM)
+
+    try:
+        category_quantity = float(product_data.get('inventory', 0) or 0)
+    except (TypeError, ValueError):
+        category_quantity = 0.0
+
+    return {
+        'category': str(product_data.get('category', 'unknown')).split('>')[0].strip().lower(),
+        'competitive_price': float(avg_competitor_price),
+        'competitor_count': competitor_count,
+        'category_quantity': category_quantity,
+        'total_visitors': total_visitors,
+        'monthly_event_days': monthly_event_days,
+        'temperature_celsius': float(temperature),
+        'prcp_mm': float(precipitation),
+    }
+
+
+def generate_model_prediction(product_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Generate a pricing baseline using the trained ML model if available."""
+
+    features = build_model_features(product_data)
+    result: Dict[str, Any] = {
+        'features': features,
+        'price': None,
+        'artifact_path': None,
+        'error': None,
+    }
+
+    if not PRICING_MODEL_AVAILABLE:
+        result['error'] = PRICING_MODEL_ERROR or "Pricing model utilities unavailable."
+        return result
+
+    try:
+        result['price'] = predict_price(features)
+        model_path = find_model_path()
+        result['artifact_path'] = str(model_path) if model_path else None
+    except PricingModelNotFoundError as exc:
+        result['error'] = str(exc)
+    except Exception as exc:  # pragma: no cover - defensive catch for runtime prediction issues
+        result['error'] = f"Model prediction failed: {exc}"
+
+    return result
+
+
 def simulate_dynamic_pricing_recommendation(product_data: Dict) -> Dict[str, Any]:
     """
     Advanced dynamic pricing recommendation engine
@@ -171,6 +288,7 @@ def simulate_dynamic_pricing_recommendation(product_data: Dict) -> Dict[str, Any
     """
 
     current_price = product_data['current_price']
+    model_prediction = generate_model_prediction(product_data)
     competitor_prices = product_data.get('competitor_pricing', {})
     market_data = product_data.get('market_data', {})
     performance = product_data.get('performance_metrics', {})
@@ -275,7 +393,8 @@ def simulate_dynamic_pricing_recommendation(product_data: Dict) -> Dict[str, Any
             'expected_revenue_change_percent': expected_revenue_change * 100,
             'risk_level': 'Low' if abs(price_change_percent) < 5 else 'Medium' if abs(
                 price_change_percent) < 10 else 'High'
-        }
+        },
+        'model_prediction': model_prediction,
     }
 
 
@@ -310,6 +429,15 @@ if market_data:
     st.sidebar.metric("Online Growth", f"{indicators.get('online_retail_growth', 10):.1f}%")
     st.sidebar.metric("Avg Discount Rate",
                       f"{market_data.get('competitive_landscape', {}).get('average_discount_rate', 0.15) * 100:.1f}%")
+
+model_artifact_path = find_model_path()
+if PRICING_MODEL_AVAILABLE:
+    if model_artifact_path:
+        st.sidebar.success(f"ML pricing model loaded: {Path(model_artifact_path).name}")
+    else:
+        st.sidebar.warning("ML pricing model not found. Run model_training.py to enable baseline recommendations.")
+else:
+    st.sidebar.warning(f"ML pricing model unavailable: {PRICING_MODEL_ERROR}")
 
 # Main content area
 tab1, tab2, tab3, tab4 = st.tabs(
@@ -492,6 +620,33 @@ with tab3:
                     risk_color = {"Low": "🟢", "Medium": "🟡", "High": "🔴"}
                     risk_level = recommendation['impact_prediction']['risk_level']
                     st.metric("Risk Level", f"{risk_color.get(risk_level, '⚪')} {risk_level}")
+
+                model_prediction = recommendation.get('model_prediction', {})
+                ml_price = model_prediction.get('price')
+                ml_error = model_prediction.get('error')
+                ml_artifact = model_prediction.get('artifact_path')
+
+                ml_col1, ml_col2 = st.columns([1, 3])
+                with ml_col1:
+                    if ml_price is not None:
+                        st.metric("ML Baseline Price (IDR)", f"Rp {ml_price:,.0f}")
+                    else:
+                        st.metric("ML Baseline Price (IDR)", "Unavailable")
+
+                with ml_col2:
+                    if ml_error:
+                        st.warning(f"ML baseline unavailable: {ml_error}")
+                    elif ml_artifact:
+                        st.caption(f"Model artifact: {ml_artifact}")
+
+                if model_prediction.get('features'):
+                    with st.expander("Model input features"):
+                        st.json(model_prediction['features'])
+                        if MODEL_REQUIRED_FEATURES:
+                            st.caption(
+                                "Required features: "
+                                + ", ".join(str(feature) for feature in MODEL_REQUIRED_FEATURES)
+                            )
 
                 # Reasoning
                 st.subheader("🧠 AI Reasoning")
