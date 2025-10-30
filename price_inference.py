@@ -8,11 +8,14 @@ from typing import Dict
 import joblib
 import pandas as pd
 
-from live_feature_builder import build_realtime_features_for_service
+from .live_feature_builder import build_realtime_features_for_service
+
+_MODULE_DIR = Path(__file__).resolve().parent
 
 MODEL_PATHS = [
     Path("artifacts/dynamic_pricing_model.joblib"),
     Path("dynamic_pricing_model.joblib"),
+    _MODULE_DIR / "dynamic_pricing_model.joblib",
 ]
 
 FEATURE_COLUMNS = [
