@@ -1,4 +1,4 @@
-"""Inference utilities for the dynamic pricing model."""
+"""Realtime inference helpers for the dynamic pricing pipeline."""
 from __future__ import annotations
 
 from functools import lru_cache
@@ -8,12 +8,11 @@ from typing import Dict
 import joblib
 import pandas as pd
 
-from live_feature_builder import build_realtime_features_for_service
+from .live_feature_builder import build_realtime_features_for_service
 
-MODEL_PATHS = [
-    Path("artifacts/dynamic_pricing_model.joblib"),
-    Path("dynamic_pricing_model.joblib"),
-]
+PROJECT_DIR = Path(__file__).resolve().parent
+ARTIFACTS_DIR = PROJECT_DIR / "artifacts"
+MODEL_PATH = ARTIFACTS_DIR / "dynamic_pricing_model.joblib"
 
 FEATURE_COLUMNS = [
     "category",
@@ -29,24 +28,22 @@ FEATURE_COLUMNS = [
 
 @lru_cache(maxsize=1)
 def _load_pipeline():
-    for model_path in MODEL_PATHS:
-        if model_path.exists():
-            return joblib.load(model_path)
-    raise FileNotFoundError(
-        "Could not locate dynamic pricing model. Expected one of: "
-        + ", ".join(str(path) for path in MODEL_PATHS)
-    )
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            "Could not locate dynamic pricing model at " f"{MODEL_PATH}. Run train_and_save_model first."
+        )
+    return joblib.load(MODEL_PATH)
 
 
 def get_live_pricing_recommendation(service_id: str, lat: float, lon: float) -> Dict[str, float]:
-    """Return a pricing recommendation for the specified service."""
+    """Generate a pricing recommendation for the given service."""
     pipeline = _load_pipeline()
     feature_snapshot = build_realtime_features_for_service(service_id, lat, lon)
     feature_frame = pd.DataFrame([feature_snapshot])
     prediction_features = feature_frame[FEATURE_COLUMNS]
     recommended_price = float(pipeline.predict(prediction_features)[0])
 
-    result = {
+    return {
         "service_id": feature_snapshot["category"],
         "current_base_price": float(feature_snapshot["base_price_idr"]),
         "recommended_price": recommended_price,
@@ -63,10 +60,6 @@ def get_live_pricing_recommendation(service_id: str, lat: float, lon: float) -> 
         },
         "raw_features": feature_snapshot,
     }
-    return result
 
 
-__all__ = [
-    "get_live_pricing_recommendation",
-    "FEATURE_COLUMNS",
-]
+__all__ = ["get_live_pricing_recommendation", "FEATURE_COLUMNS"]
