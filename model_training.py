@@ -1,26 +1,18 @@
-"""Training pipeline for dynamic pricing model using preprocessed dataset.
-
-This script loads the `dataset_preprocessed.csv` file, performs the necessary
-transformations (categorical encoding) and normalization of numeric features,
-trains a machine learning model, evaluates it, and stores the trained pipeline
-for later use.
-"""
-
+"""Training utilities for the dynamic pricing baseline model."""
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Tuple
+from typing import Dict, Tuple
 
 import joblib
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.impute import SimpleImputer
-
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DATA_PATH = PROJECT_DIR / "dataset_preprocessed.csv"
@@ -33,23 +25,20 @@ def load_dataset(path: Path = DATA_PATH) -> Tuple[pd.DataFrame, pd.Series]:
     if not path.exists():
         raise FileNotFoundError(f"Dataset not found at {path}")
 
-    dataset = pd.read_csv(path, parse_dates=["date"])  # Ensure chronological sorting works reliably
+    dataset = pd.read_csv(path, parse_dates=["date"]).sort_values("date").reset_index(drop=True)
 
-    dataset = dataset.sort_values("date").reset_index(drop=True)
-
+    target = dataset["base_price_idr"]
     feature_columns = [
         column
         for column in dataset.columns
         if column not in {"base_price_idr", "date"}
     ]
-
     features = dataset[feature_columns]
-    target = dataset["base_price_idr"]
     return features, target
 
 
 def build_pipeline() -> Pipeline:
-    """Construct the training pipeline with preprocessing and model."""
+    """Construct the preprocessing and modelling pipeline."""
     categorical_features = ["category"]
     numeric_features = [
         "competitive_price",
@@ -84,9 +73,9 @@ def build_pipeline() -> Pipeline:
 
     model = RandomForestRegressor(
         n_estimators=300,
+        min_samples_leaf=2,
         random_state=42,
         n_jobs=-1,
-        min_samples_leaf=2,
     )
 
     return Pipeline(
@@ -97,13 +86,12 @@ def build_pipeline() -> Pipeline:
     )
 
 
-def train_model() -> dict:
-    """Run the training pipeline and return evaluation metrics."""
+def train_and_save_model() -> Dict[str, float]:
+    """Train the baseline model and persist the fitted pipeline."""
     features, target = load_dataset()
-
     train_size = int(len(features) * 0.8)
     if train_size == 0 or train_size == len(features):
-        raise ValueError("Dataset is too small to split into train and test sets.")
+        raise ValueError("Dataset is too small to create a temporal train/test split.")
 
     X_train = features.iloc[:train_size]
     X_test = features.iloc[train_size:]
@@ -114,11 +102,10 @@ def train_model() -> dict:
     pipeline.fit(X_train, y_train)
 
     predictions = pipeline.predict(X_test)
-
     mse = mean_squared_error(y_test, predictions)
-    metrics = {
-        "r2": r2_score(y_test, predictions),
-        "mae": mean_absolute_error(y_test, predictions),
+    metrics: Dict[str, float] = {
+        "r2": float(r2_score(y_test, predictions)),
+        "mae": float(mean_absolute_error(y_test, predictions)),
         "rmse": float(np.sqrt(mse)),
     }
 
@@ -129,8 +116,7 @@ def train_model() -> dict:
 
 
 def main() -> None:
-    metrics = train_model()
-
+    metrics = train_and_save_model()
     print("Dynamic pricing model trained successfully. Evaluation metrics:")
     print(f"  R^2 Score : {metrics['r2']:.4f}")
     print(f"  MAE       : {metrics['mae']:.2f}")
