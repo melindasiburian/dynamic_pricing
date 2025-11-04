@@ -1,11 +1,22 @@
 """Simple live pricing loop that simulates recommendations and outcomes."""
 from __future__ import annotations
 
+import sys
 import time
+from pathlib import Path
 from typing import Dict
 
-from .price_inference import get_live_pricing_recommendation
-from .pricing_logger import log_pricing_event
+if __package__ in (None, ""):
+    CURRENT_DIR = Path(__file__).resolve().parent
+    if str(CURRENT_DIR) not in sys.path:
+        sys.path.append(str(CURRENT_DIR))
+    import price_inference  # type: ignore
+    import pricing_logger  # type: ignore
+else:
+    from . import price_inference, pricing_logger
+
+get_live_pricing_recommendation = price_inference.get_live_pricing_recommendation
+log_pricing_event = pricing_logger.log_pricing_event
 
 
 def simulate_outcome(price_idr: float, visitors: int) -> Dict[str, int | float]:

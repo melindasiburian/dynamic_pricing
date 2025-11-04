@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Tuple
 
-import gym
+import gymnasium as gym
 import numpy as np
 import pandas as pd
 
