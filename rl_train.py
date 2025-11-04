@@ -2,13 +2,26 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from importlib import import_module
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Dict
+import sys
 
 import numpy as np
 from stable_baselines3 import PPO
 
-from .rl_environment import PricingEnv
+if __package__ in (None, ""):
+    CURRENT_DIR = Path(__file__).resolve().parent
+    module_spec = spec_from_file_location("rl_environment", CURRENT_DIR / "rl_environment.py")
+    if module_spec is None or module_spec.loader is None:
+        raise ModuleNotFoundError("Unable to locate rl_environment module alongside rl_train.py")
+    rl_environment = module_from_spec(module_spec)
+    module_spec.loader.exec_module(rl_environment)
+else:
+    rl_environment = import_module(f"{__package__}.rl_environment")
+
+PricingEnv = rl_environment.PricingEnv
 
 PROJECT_DIR = Path(__file__).resolve().parent
 ARTIFACTS_DIR = PROJECT_DIR / "artifacts"

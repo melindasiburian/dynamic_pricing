@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Tuple
 
-import gym
+import gymnasium as gym
 import numpy as np
 import pandas as pd
 
@@ -52,7 +52,23 @@ class PricingEnv(gym.Env):
 
     def step(self, action: np.ndarray):
         row = self.log_df.iloc[self.idx]
-        reward = float(row["profit_idr"])
+
+        # Clip the action to the defined bounds and interpret it as a percentage
+        # adjustment to the logged recommended price.
+        clipped_action = float(
+            np.clip(action[0], self.action_space.low[0], self.action_space.high[0])
+        )
+
+        base_price = float(row["recommended_price"])
+        adjusted_price = max(1.0, base_price * (1.0 + clipped_action))
+
+        visitors = max(0, int(row["total_visitors"]))
+        base_demand = visitors * 0.2
+        price_pressure = max(0.1, 5_000_000 / max(adjusted_price, 1.0))
+        units_sold = max(0, int(base_demand * price_pressure))
+
+        revenue_idr = units_sold * adjusted_price
+        reward = revenue_idr * 0.35
 
         self.idx += 1
         done = self.idx >= len(self.log_df)
@@ -62,7 +78,11 @@ class PricingEnv(gym.Env):
         else:
             next_state = self._get_state()
 
-        info: Dict = {}
+        info: Dict = {
+            "logged_profit": float(row["profit_idr"]),
+            "adjusted_price": adjusted_price,
+            "units_sold": units_sold,
+        }
         truncated = False
         return next_state, reward, done, truncated, info
 

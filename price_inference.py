@@ -2,13 +2,23 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from importlib import import_module
 from pathlib import Path
 from typing import Dict
+import sys
 
 import joblib
 import pandas as pd
 
-from .live_feature_builder import build_realtime_features_for_service
+if __package__ in (None, ""):
+    CURRENT_DIR = Path(__file__).resolve().parent
+    if str(CURRENT_DIR) not in sys.path:
+        sys.path.append(str(CURRENT_DIR))
+    live_feature_builder = import_module("live_feature_builder")
+else:
+    live_feature_builder = import_module(f"{__package__}.live_feature_builder")
+
+build_realtime_features_for_service = live_feature_builder.build_realtime_features_for_service
 
 PROJECT_DIR = Path(__file__).resolve().parent
 ARTIFACTS_DIR = PROJECT_DIR / "artifacts"
