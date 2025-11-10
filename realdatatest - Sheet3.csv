@@ -1,0 +1,134 @@
+service_id,service_name,package_name,base_price_idr,category
+5d170d06-336d-424b-a8aa-fd432338bbed,Bali Jeep Adventure by Weda Tour,Jeep Tour Package,187000.00,experience
+14060d68-dbaa-40c6-9354-07b0d045dedf,White Rock Beach Club,Lagoon Sofa,4000000.00,entertainment
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Yamaha Nmax (Daily),182875.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Yamaha Xmax (Daily),354750.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Honda PCX (Weekly),1386000.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Honda PCX (Monthly),2761000.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Honda Scoopy (Monthly),1537250.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Yamaha Nmax (Weekly),1386000.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Yamaha Nmax (Monthly),2761000.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Yamaha Fazzio (Weekly),643500.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Yamaha Xmax (Monthly),5511000.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Honda PCX (Daily),182875.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Yamaha Xmax (Weekly),2211000.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Honda Scoopy (Daily),134750.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Yamaha Fazzio (Monthly),1537250.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Honda Scoopy (Weekly),643500.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,Yamaha Fazzio (Daily),134750.00,rental
+0f1d19a2-7376-4a6d-9552-b7a3e1ccc26d,Motorbike Rental by Weda Tour,,134750.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Snorkeling Package (5 PAX),771100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Ticket Boat Return (2 PAX),507100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,West Trip (5 PAX),731500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Mix East + West (4 PAX),929500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Mix East + West (6 PAX),797500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,East Trip (3 PAX),903100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,East Trip (4 PAX),837100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Snorkeling Package (3 PAX),837100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Ticket Boat Return (6 PAX),507100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,East Trip (5 PAX),771100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Snorkeling Package (6 PAX),731500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Mix East + West (5 PAX),863500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,East Trip (6 PAX),731500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Ticket Boat Return (5 PAX),507100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,West Trip (2 PAX),929500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,West + Snorkeling (5 PAX),929500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,West + Snorkeling (3 PAX),995500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,West + Snorkeling (2 PAX),1061500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Ticket Boat Return (3 PAX),507100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Mix East + West (3 PAX),995500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Mix East + West (2 PAX),1101100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,West Trip (3 PAX),863500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,East Trip (2 PAX),969100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,West Trip (6 PAX),705100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Snorkeling Package (2 PAX),863500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Snorkeling Package (4 PAX),797500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,Ticket Boat Return (4 PAX),507100.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,West Trip (4 PAX),797500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,West + Snorkeling (6 PAX),863500.00,rental
+1d8c85fd-cb9a-4994-a89c-a9813c43393c,Nusa Penida Tour - Own Transport by Weda Tour,West + Snorkeling (4 PAX),969100.00,rental
+258109d0-fde0-42a1-9d1a-ca58851a2706,Bali Snorkeling Adventure by Weda Tour,Underwater Discovery,423500.00,experience
+2d2959d8-2b61-4537-8635-6e493f61b73e,Car Rental by Weda Tour,Toyota Avanza 2023 (Weekly),3379750.00,rental
+2d2959d8-2b61-4537-8635-6e493f61b73e,Car Rental by Weda Tour,Toyota Avanza 2023 (Daily),492250.00,rental
+2d2959d8-2b61-4537-8635-6e493f61b73e,Car Rental by Weda Tour,Toyota HiAce 2022 (Weekly),2073500.00,rental
+34d80714-d0cb-46d6-98cb-205042f39027,Tropical Temptation Beach Club,Bed Plantation,1000000.00,nightclub
+34d80714-d0cb-46d6-98cb-205042f39028,Tropical Temptation Beach Club,Bed Sand Daybed (east / west),2000000.00,nightclub
+34d80714-d0cb-46d6-98cb-205042f39029,Tropical Temptation Beach Club,Entrance Ticket,250000.00,nightclub
+34d80714-d0cb-46d6-98cb-205042f39030,Tropical Temptation Beach Club,Sofa Lounge,1000000.00,nightclub
+54dcbb3a-dd97-4e22-9840-ee4fac9bab92,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,East Trip (3 PAX),995500.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab93,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Ticket Boat Return (6 PAX),771100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab94,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Ticket Boat Return (3 PAX),771100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab95,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,East Trip (5 PAX),863500.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab96,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Snorkeling Package (2 PAX),969100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab97,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,West Trip (2 PAX),1101100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab98,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Ticket Boat Return (5 PAX),771100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab99,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Mix East + West (3 PAX),1167100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab100,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Mix East + West (6 PAX),969100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab101,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,West Trip (5 PAX),771100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab102,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Snorkeling Package (5 PAX),837100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab103,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Mix East + West (5 PAX),995500.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab104,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,West Trip (5 PAX),837100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab105,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Snorkeling Package (6 PAX),771100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab106,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,West + Snorkeling (3 PAX),1167100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab107,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,West + Snorkeling (6 PAX),903100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab108,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Ticket Boat Return (4 PAX),771100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab109,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,East Trip (4 PAX),929500.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab110,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Snorkeling Package (4 PAX),903100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab111,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,West + Snorkeling (5 PAX),969100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab112,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Mix East + West (2 PAX),1233100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab113,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,West Trip (3 PAX),969100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab114,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,West Trip (4 PAX),903100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab115,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,East Trip (6 PAX),797500.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab116,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Snorkeling Package (3 PAX),929500.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab117,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Mix East + West (4 PAX),1035100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab118,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Ticket Boat Return (2 PAX),507100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab119,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,West + Snorkeling (2 PAX),1299100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab120,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,West + Snorkeling (4 PAX),1101100.00,rental
+54dcbb3a-dd97-4e22-9840-ee4fac9bab121,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,East Trip (2 PAX),1127500.00,rental
+5d170d06-336d-424b-a8aa-fd432338bbed,Bali Jeep Adventure by Weda Tour,Jeep Tour Package,187000.00,experience
+689fb286-e883-4b63-845b-2a2a59882653,Alga Salon & Barbershop,Paket Premium,1386764.00,in_room_service
+689fb286-e883-4b63-845b-2a2a59882654,Alga Salon & Barbershop,Paket Deluxe,3791962.00,in_room_service
+689fb286-e883-4b63-845b-2a2a59882655,Alga Salon & Barbershop,Paket Basic,332360.00,in_room_service
+6cfffe98-a050-4681-bb78-70b03b5f7345,Eco Fun Fishing Tour by SBW Tours & Travel,5 Pax - No Transfer,545000.00,experience
+6cfffe98-a050-4681-bb78-70b03b5f7346,Eco Fun Fishing Tour by SBW Tours & Travel,5 Pax - With Transfer,780000.00,experience
+6cfffe98-a050-4681-bb78-70b03b5f7347,Eco Fun Fishing Tour by SBW Tours & Travel,3 Pax - With Transfer,1080000.00,experience
+6cfffe98-a050-4681-bb78-70b03b5f7348,Eco Fun Fishing Tour by SBW Tours & Travel,3 Pax - No Transfer,690000.00,experience
+6cfffe98-a050-4681-bb78-70b03b5f7349,Eco Fun Fishing Tour by SBW Tours & Travel,6 Pax - With Transfer,705000.00,experience
+6cfffe98-a050-4681-bb78-70b03b5f7350,Eco Fun Fishing Tour by SBW Tours & Travel,2 Pax - With Transfer,1455000.00,experience
+6cfffe98-a050-4681-bb78-70b03b5f7351,Eco Fun Fishing Tour by SBW Tours & Travel,1 Pax - With Transfer,2590000.00,experience
+6cfffe98-a050-4681-bb78-70b03b5f7352,Eco Fun Fishing Tour by SBW Tours & Travel,6 Pax - No Transfer,507000.00,experience
+6cfffe98-a050-4681-bb78-70b03b5f7353,Eco Fun Fishing Tour by SBW Tours & Travel,4 Pax - With Transfer,895000.00,experience
+6cfffe98-a050-4681-bb78-70b03b5f7354,Eco Fun Fishing Tour by SBW Tours & Travel,1 Pax - No Transfer,1450000.00,experience
+6cfffe98-a050-4681-bb78-70b03b5f7355,Eco Fun Fishing Tour by SBW Tours & Travel,4 Pax - No Transfer,600000.00,experience
+6cfffe98-a050-4681-bb78-70b03b5f7356,Eco Fun Fishing Tour by SBW Tours & Travel,2 Pax - No Transfer,870000.00,experience
+759689f4-0cf1-4579-81cf-9707825d4b1a,Jungle Club Ubud,Value Voucher,500000.00,entertainment
+759689f4-0cf1-4579-81cf-9707825d4b1a,Jungle Club Ubud,Entrance Ticket,250000.00,entertainment
+759689f4-0cf1-4579-81cf-9707825d4b1a,Jungle Club Ubud,Daybed at Jungle Deck,1000000.00,entertainment
+759689f4-0cf1-4579-81cf-9707825d4b1a,Jungle Club Ubud,Daybed at Jungle Floor,2000000.00,entertainment
+7a07196c-62d1-402f-94a5-1508bd0ce7ab,Silver CnD,CnD package,473375.00,experience
+962a3aa3-8cbc-44a5-b465-3e859997aef8,Sugar Rays Booze Bus,Platinum Package,1075800.00,entertainment
+962a3aa3-8cbc-44a5-b465-3e859997aef9,Sugar Rays Booze Bus,Silver Package,676500.00,entertainment
+962a3aa3-8cbc-44a5-b465-3e859997aef10,Sugar Rays Booze Bus,Family Day Tour,179190.00,entertainment
+962a3aa3-8cbc-44a5-b465-3e859997aef11,Sugar Rays Booze Bus,Bronze Package,361900.00,entertainment
+a42af23c-bbf2-4c3b-8ef9-3be2b21ac22a,Mazu Beach Club Bali,Long Chair,176000.00,entertainment
+a42af23c-bbf2-4c3b-8ef9-3be2b21ac22a,Mazu Beach Club Bali,Sultan Table,1655500.00,entertainment
+a42af23c-bbf2-4c3b-8ef9-3be2b21ac22a,Mazu Beach Club Bali,Gazebo,891000.00,entertainment
+a42af23c-bbf2-4c3b-8ef9-3be2b21ac22a,Mazu Beach Club Bali,VIP Table,891000.00,entertainment
+a42af23c-bbf2-4c3b-8ef9-3be2b21ac22a,Mazu Beach Club Bali,Sunbed,451000.00,entertainment
+a42af23c-bbf2-4c3b-8ef9-3be2b21ac22a,Mazu Beach Club Bali,VVIP Table,1105500.00,entertainment
+af68acbd-2301-43bb-968c-29acb9e1c2ce,Bali Beer Cycle,Beer Package,737000.00,entertainment
+af68acbd-2301-43bb-968c-29acb9e1c2ce,Bali Beer Cycle,Champagne Package,858000.00,entertainment
+af68acbd-2301-43bb-968c-29acb9e1c2ce,Bali Beer Cycle,"Cider, Black Jack Package",797500.00,entertainment
+b85f7a6a-0617-4561-b78b-60c1babb23db,Bali ATV Adventure by Weda Tour,Single ATV,973500.00,experience
+b85f7a6a-0617-4561-b78b-60c1babb23db,Bali ATV Adventure by Weda Tour,Tandem ATV,1386000.00,experience
+d258aea6-43b2-4f40-a8ba-ad8886eb1831,Ayung River Rafting,Rafting Adventure,698500.00,experience
+ecd1abf4-6e1e-4e68-9856-725f05b7ab9d,Beat Boat Bali,Beat Boat (Exclude Party Bus),390500.00,entertainment
+ecd1abf4-6e1e-4e68-9856-725f05b7ab9d,Beat Boat Bali,All You Can Drink,1080750.00,entertainment
+eeb32055-e8b5-4737-84d1-3469cc5b58e7,Mirror Nightclub and Lounge Bali,Medium Table (6 pax),4005000.00,entertainment
+eeb32055-e8b5-4737-84d1-3469cc5b58e8,Mirror Nightclub and Lounge Bali,Small Table (4 pax),2005000.00,entertainment
+eeb32055-e8b5-4737-84d1-3469cc5b58e9,Mirror Nightclub and Lounge Bali,Royal Table (Up to 20 pax),25005000.00,entertainment
+fe232575-0fd7-40e9-a588-8eb09badb713,Diving/Scuba Experience in Nusa Dua by Weda Tour,Deep Blue Explorer,1111000.00,experience
+ff523e7a-d8cb-4950-98b3-56d2abeeff42,My Zen Spa Bali,Balinese Massage 1 Hour (60 Minutes),225500.00,in_room_service
+ff523e7a-d8cb-4950-98b3-56d2abeeff43,My Zen Spa Bali,"Package 2,  3 Hours (180 Minutes)",720500.00,in_room_service
+ff523e7a-d8cb-4950-98b3-56d2abeeff44,My Zen Spa Bali,Deep Tissue 1 Hour (60 Minutes),335500.00,in_room_service
+ff523e7a-d8cb-4950-98b3-56d2abeeff45,My Zen Spa Bali,"Package 1, 2 Hours (120 Minutes)",500500.00,in_room_service
