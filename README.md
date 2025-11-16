@@ -21,6 +21,15 @@ the project root (or inside `artifacts/`). Then launch the dashboard with:
 streamlit run streamlit_app.py
 ```
 
-The app lets you enter a service identifier together with latitude and longitude
-coordinates. It returns the recommended price along with the contextual metrics
-used by the model.
+The Streamlit app provides two workflows that consume the same real-time
+features used during model training:
+
+1. **Halaman Rekomendasi** – pilih paket dari file
+   `realdatatest - Sheet3.csv` lalu masukkan data harian seperti `competitive_price`,
+   `competitor_count`, `category_quantity`, dan faktor makro (`total_visitors`,
+   `monthly_event_days`, `temperature_celsius`, `prcp_mm`). Model random forest
+   akan mengembalikan rekomendasi harga untuk paket yang dipilih.
+2. **Halaman Forecasting** – masukkan faktor makro harian sekali dan isi tabel
+   metrik per kategori (entertainment, experience, rental, in_room_service).
+   Aplikasi akan menghitung prediksi harga untuk seluruh paket di katalog dan
+   menyediakan ringkasan per kategori beserta opsi unduh CSV.
