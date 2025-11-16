@@ -51,10 +51,10 @@ service_id,service_name,package_name,base_price_idr,category
 2d2959d8-2b61-4537-8635-6e493f61b73e,Car Rental by Weda Tour,Toyota Avanza 2023 (Weekly),3379750.00,rental
 2d2959d8-2b61-4537-8635-6e493f61b73e,Car Rental by Weda Tour,Toyota Avanza 2023 (Daily),492250.00,rental
 2d2959d8-2b61-4537-8635-6e493f61b73e,Car Rental by Weda Tour,Toyota HiAce 2022 (Weekly),2073500.00,rental
-34d80714-d0cb-46d6-98cb-205042f39027,Tropical Temptation Beach Club,Bed Plantation,1000000.00,nightclub
-34d80714-d0cb-46d6-98cb-205042f39028,Tropical Temptation Beach Club,Bed Sand Daybed (east / west),2000000.00,nightclub
-34d80714-d0cb-46d6-98cb-205042f39029,Tropical Temptation Beach Club,Entrance Ticket,250000.00,nightclub
-34d80714-d0cb-46d6-98cb-205042f39030,Tropical Temptation Beach Club,Sofa Lounge,1000000.00,nightclub
+34d80714-d0cb-46d6-98cb-205042f39027,Tropical Temptation Beach Club,Bed Plantation,1000000.00,entertainment
+34d80714-d0cb-46d6-98cb-205042f39028,Tropical Temptation Beach Club,Bed Sand Daybed (east / west),2000000.00,entertainment
+34d80714-d0cb-46d6-98cb-205042f39029,Tropical Temptation Beach Club,Entrance Ticket,250000.00,entertainment
+34d80714-d0cb-46d6-98cb-205042f39030,Tropical Temptation Beach Club,Sofa Lounge,1000000.00,entertainment
 54dcbb3a-dd97-4e22-9840-ee4fac9bab92,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,East Trip (3 PAX),995500.00,rental
 54dcbb3a-dd97-4e22-9840-ee4fac9bab93,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Ticket Boat Return (6 PAX),771100.00,rental
 54dcbb3a-dd97-4e22-9840-ee4fac9bab94,Nusa Penida Tour-Pick Up Drop Hotel by Weda Tour,Ticket Boat Return (3 PAX),771100.00,rental
@@ -131,4 +131,5 @@ fe232575-0fd7-40e9-a588-8eb09badb713,Diving/Scuba Experience in Nusa Dua by Weda
 ff523e7a-d8cb-4950-98b3-56d2abeeff42,My Zen Spa Bali,Balinese Massage 1 Hour (60 Minutes),225500.00,in_room_service
 ff523e7a-d8cb-4950-98b3-56d2abeeff43,My Zen Spa Bali,"Package 2,  3 Hours (180 Minutes)",720500.00,in_room_service
 ff523e7a-d8cb-4950-98b3-56d2abeeff44,My Zen Spa Bali,Deep Tissue 1 Hour (60 Minutes),335500.00,in_room_service
+
 ff523e7a-d8cb-4950-98b3-56d2abeeff45,My Zen Spa Bali,"Package 1, 2 Hours (120 Minutes)",500500.00,in_room_service
