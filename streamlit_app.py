@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from datetime import date, timedelta
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -20,6 +21,21 @@ MODEL_CANDIDATES: List[Path] = [
 ]
 CATEGORIES = ["entertainment", "experience", "rental", "in_room_service"]
 REALTIME_API_URL_ENV = "REALTIME_METRICS_API_URL"
+
+HOLIDAY_CANDIDATES = {
+    1: ["Tahun Baru Masehi", "Imlek", "Cuti Bersama Imlek"],
+    2: ["Isra Mi'raj", "Hari Valentine"],
+    3: ["Nyepi", "Hari Raya Nyepi", "Hari Perempuan"],
+    4: ["Waisak", "Paskah", "Jumat Agung"],
+    5: ["Hari Buruh", "Kenaikan Isa Almasih", "Hari Pendidikan Nasional"],
+    6: ["Hari Lahir Pancasila", "Idul Adha", "Cuti Bersama Idul Adha"],
+    7: ["Idul Adha", "Tahun Baru Hijriah", "Libur Sekolah"],
+    8: ["Hari Kemerdekaan RI", "Libur Panjang Musim Panas"],
+    9: ["Maulid Nabi", "Libur Sekolah"],
+    10: ["Maulid Nabi", "Cuti Bersama Maulid"],
+    11: ["Hari Pahlawan", "Cuti Bersama Akhir Tahun"],
+    12: ["Natal", "Cuti Bersama Natal", "Tahun Baru"] ,
+}
 
 
 @st.cache_resource(show_spinner=False)
@@ -44,6 +60,124 @@ def load_service_catalog() -> pd.DataFrame:
     catalog = pd.read_csv(SERVICE_CATALOG_PATH)
     catalog.columns = [col.strip() for col in catalog.columns]
     return catalog
+
+
+def format_rupiah(value: float) -> str:
+    """Format number as Rupiah with dot separators."""
+
+    try:
+        rounded = round(float(value))
+    except (TypeError, ValueError):
+        return "Rp 0"
+    return f"Rp {rounded:,.0f}".replace(",", ".")
+
+
+def get_holiday_names(target_date: date, event_count: float) -> List[str]:
+    """Return deterministic holiday names for the target month based on requested count."""
+
+    month_holidays = HOLIDAY_CANDIDATES.get(target_date.month, [])
+    if not month_holidays or event_count <= 0:
+        return []
+
+    rng = np.random.default_rng(int(target_date.strftime("%Y%m")))
+    choices = rng.choice(month_holidays, size=min(int(event_count), len(month_holidays)), replace=False)
+    return sorted(set(choices.tolist()))
+
+
+def _extract_duration(name: str) -> Optional[str]:
+    lower = name.lower()
+    for label in ("daily", "weekly", "monthly"):
+        if label in lower:
+            return label
+    return None
+
+
+def _extract_pax(name: str) -> Optional[int]:
+    match = re.search(r"(\d+)\s*pax", name, flags=re.IGNORECASE)
+    return int(match.group(1)) if match else None
+
+
+def _extract_tier(name: str) -> Optional[str]:
+    tiers = [
+        "royal",
+        "platinum",
+        "premium",
+        "deluxe",
+        "standard",
+        "basic",
+        "economy",
+    ]
+    lower = name.lower()
+    for tier in tiers:
+        if tier in lower:
+            return tier
+    return None
+
+
+def apply_pricing_hierarchy(df: pd.DataFrame) -> pd.DataFrame:
+    """Adjust recommended prices so they follow intuitive hierarchies within each service."""
+
+    adjusted = df.copy()
+    duration_rank = {"daily": 0, "weekly": 1, "monthly": 2}
+    tier_rank = {
+        "royal": 5,
+        "platinum": 4,
+        "premium": 3,
+        "deluxe": 2,
+        "standard": 1,
+        "basic": 0,
+        "economy": -1,
+    }
+
+    for service_name, group_idx in adjusted.groupby("service_name").groups.items():
+        subset = adjusted.loc[group_idx]
+
+        # Enforce daily < weekly < monthly for rentals or duration-marked packages
+        duration_subset = subset.assign(duration=subset["package_name"].apply(_extract_duration)).dropna(subset=["duration"])
+        if len(duration_subset) > 1:
+            ordered = duration_subset.sort_values("duration", key=lambda s: s.map(duration_rank))
+            prev_price = None
+            for _, row in ordered.iterrows():
+                idx = row.name
+                base = float(adjusted.at[idx, "base_price_idr"])
+                recommended = float(adjusted.at[idx, "recommended_price"])
+                minimum_increment = max(base * 0.03, 25_000)
+                if prev_price is not None and recommended <= prev_price:
+                    recommended = prev_price + minimum_increment
+                adjusted.at[idx, "recommended_price"] = recommended
+                prev_price = recommended
+
+        # Enforce fewer pax > more pax
+        pax_subset = subset.assign(pax=subset["package_name"].apply(_extract_pax)).dropna(subset=["pax"])
+        if len(pax_subset) > 1:
+            ordered = pax_subset.sort_values("pax")
+            prev_price = None
+            for _, row in ordered.iterrows():
+                idx = row.name
+                base = float(adjusted.at[idx, "base_price_idr"])
+                recommended = float(adjusted.at[idx, "recommended_price"])
+                minimum_gap = max(base * 0.02, 15_000)
+                if prev_price is not None and recommended >= prev_price:
+                    recommended = max(prev_price - minimum_gap, minimum_gap)
+                prev_price = recommended
+                adjusted.at[idx, "recommended_price"] = recommended
+
+        # Enforce tier hierarchy: premium > deluxe > basic, etc.
+        tier_subset = subset.assign(tier=subset["package_name"].apply(_extract_tier)).dropna(subset=["tier"])
+        if len(tier_subset) > 1:
+            ordered = tier_subset.sort_values("tier", key=lambda s: s.map(tier_rank), ascending=False)
+            prev_price = None
+            for _, row in ordered.iterrows():
+                idx = row.name
+                base = float(adjusted.at[idx, "base_price_idr"])
+                recommended = float(adjusted.at[idx, "recommended_price"])
+                minimum_gap = max(base * 0.05, 35_000)
+                if prev_price is not None and recommended <= prev_price:
+                    recommended = prev_price + minimum_gap
+                prev_price = recommended
+                adjusted.at[idx, "recommended_price"] = recommended
+
+    return adjusted
 
 
 def _generate_dummy_metrics(target_date: date) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
@@ -153,15 +287,12 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
     st.caption("Data makro-ekonomi yang berlaku untuk seluruh kategori pada tanggal terpilih.")
     macro_cols = st.columns(4)
     macro_cols[0].metric("Total Visitors", f"{macro_metrics['total_visitors']:,.0f}")
-    macro_cols[1].metric("Monthly Event Days", f"{macro_metrics['monthly_event_days']:,.0f}")
+    holiday_names = get_holiday_names(analysis_date, macro_metrics["monthly_event_days"])
+    holiday_label = ", ".join(holiday_names) if holiday_names else "Tidak ada hari libur khusus"
+    macro_cols[1].metric("Monthly Event Days", f"{macro_metrics['monthly_event_days']:,.0f} hari")
     macro_cols[2].metric("Temperature (°C)", f"{macro_metrics['temperature_celsius']:.1f}")
     macro_cols[3].metric("Precipitation (mm)", f"{macro_metrics['prcp_mm']:.1f}")
-
-    st.caption("Metrik kompetitor per kategori diambil otomatis dari sistem monitoring.")
-    st.dataframe(
-        pd.DataFrame.from_dict(category_metrics, orient="index"),
-        use_container_width=True,
-    )
+    st.caption(f"Hari libur/agenda bulan ini: {holiday_label}.")
 
     category = st.selectbox("Pilih Kategori", options=CATEGORIES)
     service_options = (
@@ -184,7 +315,7 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
     selection = package_options.loc[package_options["package_name"] == package_name].iloc[0]
 
     st.info(
-        f"Kategori paket: **{selection['category']}** — Harga dasar historis: ``{selection['base_price_idr']:,}``"
+        f"Kategori paket: **{selection['category']}** — Harga dasar historis: **{format_rupiah(selection['base_price_idr'])}**"
     )
 
     record = {
@@ -201,7 +332,11 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
 
     st.success("Rekomendasi harga real-time siap digunakan.")
     delta_vs_competitor = prediction - record["competitive_price"]
-    st.metric("Harga Rekomendasi Hari Ini (IDR)", f"{prediction:,.0f}", f"{delta_vs_competitor:,.0f} vs kompetitor")
+    st.metric(
+        "Harga Rekomendasi Hari Ini",
+        format_rupiah(prediction),
+        f"{format_rupiah(delta_vs_competitor)} vs kompetitor",
+    )
 
     st.markdown("### Prediksi Beberapa Hari ke Depan")
     horizon = st.slider("Jumlah hari ke depan", min_value=1, max_value=7, value=3)
@@ -228,10 +363,15 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
             }
         )
 
-    st.dataframe(pd.DataFrame(future_rows), use_container_width=True)
+    future_df = pd.DataFrame(future_rows)
+    future_df["recommended_price"] = future_df["recommended_price"].apply(format_rupiah)
+    future_df["delta_vs_competitor"] = future_df["delta_vs_competitor"].apply(format_rupiah)
+    st.dataframe(future_df, use_container_width=True)
 
     st.markdown("### Detail Fitur Hari Ini")
-    st.dataframe(pd.DataFrame([record]), use_container_width=True)
+    details_df = pd.DataFrame([record])
+    details_df["competitive_price"] = details_df["competitive_price"].apply(format_rupiah)
+    st.dataframe(details_df, use_container_width=True)
 
 
 def render_forecast_page(model, catalog: pd.DataFrame) -> None:
@@ -249,9 +389,12 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
     st.subheader("Faktor Makro Harian")
     macro_cols = st.columns(4)
     macro_cols[0].metric("Total Visitors", f"{macro_metrics['total_visitors']:,.0f}")
-    macro_cols[1].metric("Monthly Event Days", f"{macro_metrics['monthly_event_days']:,.0f}")
+    forecast_holidays = get_holiday_names(forecast_date, macro_metrics["monthly_event_days"])
+    holiday_label = ", ".join(forecast_holidays) if forecast_holidays else "Tidak ada hari libur khusus"
+    macro_cols[1].metric("Monthly Event Days", f"{macro_metrics['monthly_event_days']:,.0f} hari")
     macro_cols[2].metric("Temperature (°C)", f"{macro_metrics['temperature_celsius']:.1f}")
     macro_cols[3].metric("Precipitation (mm)", f"{macro_metrics['prcp_mm']:.1f}")
+    st.caption(f"Hari libur/agenda bulan ini: {holiday_label}.")
 
     st.subheader("Metrik per Kategori")
     st.caption("Nilai otomatis per kategori (tidak perlu input manual).")
@@ -289,9 +432,13 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
             result_rows[idx]["recommended_price"] = float(price)
             result_rows[idx]["delta_vs_base"] = float(price) - float(result_rows[idx]["base_price_idr"])
 
-        result_df = pd.DataFrame(result_rows)
+        result_df = apply_pricing_hierarchy(pd.DataFrame(result_rows))
         st.success("Forecast harian berhasil dibuat.")
-        st.dataframe(result_df, use_container_width=True)
+        display_df = result_df.copy()
+        display_df["base_price_idr"] = display_df["base_price_idr"].apply(format_rupiah)
+        display_df["recommended_price"] = display_df["recommended_price"].apply(format_rupiah)
+        display_df["delta_vs_base"] = display_df["delta_vs_base"].apply(format_rupiah)
+        st.dataframe(display_df, use_container_width=True)
 
         summary = (
             result_df.groupby("category")["recommended_price"].agg(["count", "mean", "min", "max"]).rename(columns={
@@ -302,7 +449,10 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
             })
         )
         st.markdown("### Ringkasan per Kategori")
-        st.dataframe(summary, use_container_width=True)
+        summary_display = summary.copy()
+        for col in ["harga_rata_rata", "harga_minimum", "harga_maksimum"]:
+            summary_display[col] = summary_display[col].apply(format_rupiah)
+        st.dataframe(summary_display, use_container_width=True)
 
         csv = result_df.to_csv(index=False).encode("utf-8")
         st.download_button(
