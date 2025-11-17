@@ -43,6 +43,20 @@ def load_service_catalog() -> pd.DataFrame:
         )
     catalog = pd.read_csv(SERVICE_CATALOG_PATH)
     catalog.columns = [col.strip() for col in catalog.columns]
+    catalog["category"] = catalog["category"].apply(
+        lambda value: "" if pd.isna(value) else str(value).strip()
+    )
+    catalog["service_name"] = catalog["service_name"].apply(
+        lambda value: "" if pd.isna(value) else str(value).strip()
+    )
+    catalog["package_name"] = catalog["package_name"].apply(
+        lambda value: "" if pd.isna(value) else str(value).strip()
+    )
+    missing_pkg = catalog["package_name"] == ""
+    if missing_pkg.any():
+        catalog.loc[missing_pkg, "package_name"] = catalog.loc[missing_pkg].index.map(
+            lambda idx: f"package_{idx}"
+        )
     return catalog
 
 
@@ -63,8 +77,10 @@ def _generate_dummy_metrics(
     }
 
     package_metrics: Dict[str, Dict[str, float]] = {}
-    for _, row in catalog.iterrows():
+    for idx, row in catalog.iterrows():
         package_name = row["package_name"]
+        if not isinstance(package_name, str):
+            package_name = f"package_{idx}"
         package_seed = int(target_date.strftime("%Y%m%d")) + int(
             np.frombuffer(package_name.encode("utf-8"), dtype=np.uint8).sum()
         )
