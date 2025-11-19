@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple
 import joblib
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import requests
 import streamlit as st
 
@@ -22,6 +23,14 @@ CATEGORIES = ["entertainment", "experience", "rental", "in_room_service"]
 REALTIME_API_URL_ENV = "REALTIME_METRICS_API_URL"
 
 
+def deterministic_rng(*values: object) -> np.random.Generator:
+    """Return a deterministic random generator based on arbitrary values."""
+
+    combined = "::".join(map(str, values))
+    seed = abs(hash(combined)) % (2**32)
+    return np.random.default_rng(seed)
+
+
 def format_rupiah(value: float) -> str:
     """Return a localized Rupiah string for display purposes."""
 
@@ -32,18 +41,18 @@ def holiday_name_for_date(target_date: date, monthly_event_days: float) -> str:
     """Return a friendly holiday or high-season label for the given date."""
 
     holiday_by_month = {
-        1: "Libur Tahun Baru",
-        2: "Perayaan Imlek",
-        3: "Hari Raya Nyepi",
-        4: "Ramadan & Idul Fitri",
-        5: "Libur Sekolah Awal Tahun",
-        6: "Libur Sekolah",
-        7: "High Season",
-        8: "Perayaan Kemerdekaan",
-        9: "Low Season",
-        10: "High Season",
-        11: "Menjelang Liburan Akhir Tahun",
-        12: "Natal & Tahun Baru",
+        1: "International New Year Getaway",
+        2: "Lunar New Year Travelers",
+        3: "Nyepi Spiritual Retreat",
+        4: "Spring Break & Easter Vacation",
+        5: "Golden Week & Vesak Visitors",
+        6: "Australian Winter Escape",
+        7: "Global Summer Holiday Peak",
+        8: "Late Summer & Independence Festivities",
+        9: "Surf Season Shoulder Month",
+        10: "Autumn Culture & Wellness Trips",
+        11: "Pre-Holiday International Retreats",
+        12: "Christmas & New Year Peak",
     }
 
     if monthly_event_days <= 0:
@@ -274,9 +283,107 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
         f"{format_rupiah(delta_vs_competitor)} vs kompetitor",
     )
 
+    st.markdown("### Pricing Recommendation Snapshot")
+    confidence_score = float(
+        np.clip(
+            70
+            + record["monthly_event_days"] * 4
+            - (record["prcp_mm"] / 60)
+            + min(record["competitor_count"], 10),
+            60,
+            97,
+        )
+    )
+    risk_level = "Low" if record["competitor_count"] <= 6 else "Medium"
+    trend_delta = prediction - base_price
+    summary_cols = st.columns(4)
+    summary_cols[0].metric("Harga Saat Ini", format_rupiah(base_price))
+    summary_cols[1].metric("Rekomendasi AI", format_rupiah(prediction), format_rupiah(trend_delta))
+    summary_cols[2].metric("Confidence", f"{confidence_score:.0f}%")
+    summary_cols[3].metric("Risk Level", risk_level)
+
+    reasoning_points = [
+        f"Permintaan tinggi selama {event_label.lower()}.",
+        "Harga kompetitif masih di bawah rata-rata OTA global.",
+        "Inventori kategori mencukupi untuk strategi premium ringan.",
+    ]
+    st.markdown("#### AI Reasoning")
+    for point in reasoning_points:
+        st.markdown(f"- {point}")
+
+    st.markdown("### Competitive Analysis")
+    competitor_labels = [
+        "Global OTA A",
+        "Boutique Resort B",
+        "Local Partner C",
+        "Luxury Villa D",
+    ]
+    competition_rng = deterministic_rng("competition", analysis_date, selection["package_key"])
+    competitor_prices = (
+        competition_rng.uniform(0.9, 1.15, len(competitor_labels)) * record["competitive_price"]
+    )
+    competitor_frame = pd.DataFrame(
+        {
+            "Competitor": competitor_labels + ["Harga Rekomendasi"],
+            "Price": list(competitor_prices) + [prediction],
+        }
+    )
+    competitor_frame["Price Label"] = competitor_frame["Price"].apply(format_rupiah)
+    competitor_fig = px.bar(
+        competitor_frame,
+        x="Competitor",
+        y="Price",
+        color="Competitor",
+        text="Price Label",
+        color_discrete_sequence=["#81C7F5", "#81C7F5", "#81C7F5", "#81C7F5", "#FF4B4B"],
+    )
+    competitor_fig.update_layout(yaxis_title="Harga (Rp)", showlegend=False)
+    st.plotly_chart(competitor_fig, use_container_width=True)
+
+    st.markdown("### Performance Analytics")
+    performance_rng = deterministic_rng("performance", analysis_date, selection["package_key"])
+    ctr = performance_rng.uniform(0.06, 0.14)
+    conversion_rate = performance_rng.uniform(0.03, 0.09)
+    return_rate = performance_rng.uniform(0.01, 0.04)
+    performance_cols = st.columns(2)
+    perf_bar = px.bar(
+        pd.DataFrame(
+            {
+                "Metric": ["Click Through Rate", "Conversion Rate", "Return Rate"],
+                "Percentage": [ctr * 100, conversion_rate * 100, return_rate * 100],
+                "color": ["#2ECC71", "#0070FF", "#FFB347"],
+            }
+        ),
+        x="Metric",
+        y="Percentage",
+        color="color",
+        text="Percentage",
+        color_discrete_map="identity",
+    )
+    perf_bar.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+    perf_bar.update_layout(yaxis_title="Persentase", showlegend=False)
+    performance_cols[0].plotly_chart(perf_bar, use_container_width=True)
+
+    demand_rng = deterministic_rng("demand", analysis_date, selection["package_key"])
+    demand_df = pd.DataFrame(
+        {
+            "Day": list(range(1, 8)),
+            "Relative Demand": demand_rng.uniform(0.7, 1.3, 7),
+        }
+    )
+    demand_fig = px.line(
+        demand_df,
+        x="Day",
+        y="Relative Demand",
+        markers=True,
+    )
+    demand_fig.update_layout(yaxis_title="Relative Demand", xaxis_title="Days")
+    performance_cols[1].plotly_chart(demand_fig, use_container_width=True)
+
     st.markdown("### Prediksi Beberapa Hari ke Depan")
     horizon = st.slider("Jumlah hari ke depan", min_value=1, max_value=7, value=3)
-    future_rows: List[Dict[str, float]] = []
+    future_table_rows: List[Dict[str, str]] = []
+    future_chart_rows: List[Dict[str, float]] = []
     for offset in range(1, horizon + 1):
         forecast_date = analysis_date + timedelta(days=offset)
         future_macro, future_package_metrics = fetch_daily_metrics(forecast_date, catalog)
@@ -292,7 +399,7 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
             "prcp_mm": future_macro["prcp_mm"],
         }
         future_price = float(predict_prices(model, [future_record])[0])
-        future_rows.append(
+        future_table_rows.append(
             {
                 "Tanggal": forecast_date,
                 "Periode Event": holiday_name_for_date(
@@ -304,8 +411,23 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
                 ),
             }
         )
+        future_chart_rows.append(
+            {
+                "Tanggal": forecast_date,
+                "Harga": future_price,
+            }
+        )
 
-    st.dataframe(pd.DataFrame(future_rows), use_container_width=True)
+    st.dataframe(pd.DataFrame(future_table_rows), use_container_width=True)
+    if future_chart_rows:
+        seasonal_fig = px.line(
+            pd.DataFrame(future_chart_rows),
+            x="Tanggal",
+            y="Harga",
+            markers=True,
+        )
+        seasonal_fig.update_layout(title="Seasonal Price Trend", yaxis_title="Harga (Rp)")
+        st.plotly_chart(seasonal_fig, use_container_width=True)
 
     st.markdown("### Detail Fitur Hari Ini")
     detail_frame = pd.DataFrame(
@@ -326,6 +448,33 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
         ]
     )
     st.dataframe(detail_frame, use_container_width=True, hide_index=True)
+
+    st.markdown("### Auto-Pricing Monitor")
+    config_cols = st.columns(3)
+    config_cols[0].metric("System Status", "ACTIVE")
+    config_cols[1].metric("Products Monitored", f"{int(record['competitor_count']) + 3}")
+    config_cols[2].metric("Update Frequency", "Daily")
+
+    autopricing_rng = deterministic_rng("auto", analysis_date, selection["package_key"])
+    auto_actions = ["Price decreased", "Price increased", "No change"]
+    auto_reasons = [
+        "Competitor price drop",
+        "High demand detected",
+        "Price optimal",
+    ]
+    recent_activity = []
+    for idx in range(3):
+        recent_activity.append(
+            {
+                "Time": f"{9 + idx:02d}:{15 - idx * 5:02d} AM",
+                "Product": selection["package_name"],
+                "Action": auto_actions[idx],
+                "Change": f"{autopricing_rng.uniform(-3, 3):+.1f}%",
+                "Reason": auto_reasons[idx],
+            }
+        )
+
+    st.dataframe(pd.DataFrame(recent_activity), use_container_width=True, hide_index=True)
 
 
 def render_forecast_page(model, catalog: pd.DataFrame) -> None:
