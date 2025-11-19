@@ -22,6 +22,36 @@ CATEGORIES = ["entertainment", "experience", "rental", "in_room_service"]
 REALTIME_API_URL_ENV = "REALTIME_METRICS_API_URL"
 
 
+def format_rupiah(value: float) -> str:
+    """Return a localized Rupiah string for display purposes."""
+
+    return f"Rp{value:,.0f}".replace(",", ".")
+
+
+def holiday_name_for_date(target_date: date, monthly_event_days: float) -> str:
+    """Return a friendly holiday or high-season label for the given date."""
+
+    holiday_by_month = {
+        1: "Libur Tahun Baru",
+        2: "Perayaan Imlek",
+        3: "Hari Raya Nyepi",
+        4: "Ramadan & Idul Fitri",
+        5: "Libur Sekolah Awal Tahun",
+        6: "Libur Sekolah",
+        7: "High Season",
+        8: "Perayaan Kemerdekaan",
+        9: "Low Season",
+        10: "High Season",
+        11: "Menjelang Liburan Akhir Tahun",
+        12: "Natal & Tahun Baru",
+    }
+
+    if monthly_event_days <= 0:
+        return "Tidak ada event besar"
+
+    return holiday_by_month.get(target_date.month, "Periode Spesial")
+
+
 @st.cache_resource(show_spinner=False)
 def load_model():
     """Load the trained pricing model."""
@@ -43,32 +73,45 @@ def load_service_catalog() -> pd.DataFrame:
         )
     catalog = pd.read_csv(SERVICE_CATALOG_PATH)
     catalog.columns = [col.strip() for col in catalog.columns]
+    catalog["package_key"] = catalog.apply(
+        lambda row: f"{row['service_id']}::{row['package_name']}", axis=1
+    )
     return catalog
 
 
-def _generate_dummy_metrics(target_date: date) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
+def _generate_dummy_metrics(
+    target_date: date, catalog: pd.DataFrame
+) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
     """Generate deterministic pseudo-random metrics for demo use."""
+
+    month_rng = np.random.default_rng(int(target_date.strftime("%Y%m")))
+    monthly_event_days = float(month_rng.integers(1, 6))
 
     rng = np.random.default_rng(int(target_date.strftime("%Y%m%d")))
     macro_metrics = {
         "total_visitors": float(rng.integers(60_000, 140_000)),
-        "monthly_event_days": float(rng.integers(1, 6)),
+        "monthly_event_days": monthly_event_days,
         "temperature_celsius": float(rng.normal(28, 3)),
         "prcp_mm": float(max(rng.normal(40, 15), 0)),
     }
 
-    category_metrics: Dict[str, Dict[str, float]] = {}
-    for category in CATEGORIES:
-        category_metrics[category] = {
-            "competitive_price": float(rng.uniform(150_000, 5_000_000)),
-            "competitor_count": float(rng.integers(3, 15)),
-            "category_quantity": float(rng.integers(5, 40)),
+    package_metrics: Dict[str, Dict[str, float]] = {}
+    for _, pkg in catalog.iterrows():
+        pkg_seed = abs(hash(f"{target_date.isoformat()}::{pkg['package_key']}")) % (2**32)
+        pkg_rng = np.random.default_rng(pkg_seed)
+        base_price = float(pkg["base_price_idr"])
+        package_metrics[pkg["package_key"]] = {
+            "competitive_price": float(max(base_price * pkg_rng.uniform(0.85, 1.25), 50_000)),
+            "competitor_count": float(pkg_rng.integers(3, 15)),
+            "category_quantity": float(pkg_rng.integers(5, 40)),
         }
 
-    return macro_metrics, category_metrics
+    return macro_metrics, package_metrics
 
 
-def _fetch_metrics_from_api(target_date: date) -> Optional[Tuple[Dict[str, float], Dict[str, Dict[str, float]]]]:
+def _fetch_metrics_from_api(
+    target_date: date, catalog: pd.DataFrame
+) -> Optional[Tuple[Dict[str, float], Dict[str, Dict[str, float]]]]:
     """Retrieve metrics from a real API when configured via environment variable.
 
     The expected JSON shape is:
@@ -76,8 +119,8 @@ def _fetch_metrics_from_api(target_date: date) -> Optional[Tuple[Dict[str, float
     ```json
     {
         "macro": {"total_visitors": 123, "monthly_event_days": 3, ...},
-        "category": {
-            "entertainment": {"competitive_price": 1, "competitor_count": 2, "category_quantity": 3},
+        "packages": {
+            "<service_id>::<package_name>": {"competitive_price": 1, "competitor_count": 2, "category_quantity": 3},
             ...
         }
     }
@@ -97,24 +140,37 @@ def _fetch_metrics_from_api(target_date: date) -> Optional[Tuple[Dict[str, float
 
     payload = response.json()
     macro = payload.get("macro") or {}
-    category = payload.get("category") or {}
+    package_data = payload.get("packages") or {}
 
-    if not macro or not category:
+    if not macro or not package_data:
         st.warning("Respons API tidak lengkap. Menggunakan data simulasi.")
         return None
 
-    return macro, category
+    # Ensure packages align with the catalog
+    aligned_packages: Dict[str, Dict[str, float]] = {}
+    for _, pkg in catalog.iterrows():
+        pkg_key = pkg["package_key"]
+        if pkg_key in package_data:
+            aligned_packages[pkg_key] = package_data[pkg_key]
+
+    if not aligned_packages:
+        st.warning("API tidak mengembalikan metrik paket yang sesuai katalog. Menggunakan simulasi.")
+        return None
+
+    return macro, aligned_packages
 
 
 @st.cache_data(show_spinner=False)
-def fetch_daily_metrics(target_date: date) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
+def fetch_daily_metrics(
+    target_date: date, catalog: pd.DataFrame
+) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
     """Return metrics from a real API when available, otherwise deterministic dummy data."""
 
-    api_metrics = _fetch_metrics_from_api(target_date)
+    api_metrics = _fetch_metrics_from_api(target_date, catalog)
     if api_metrics:
         return api_metrics
 
-    return _generate_dummy_metrics(target_date)
+    return _generate_dummy_metrics(target_date, catalog)
 
 
 def make_feature_frame(records: List[Dict[str, float]]) -> pd.DataFrame:
@@ -148,20 +204,21 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
     )
 
     analysis_date = st.date_input("Tanggal Analisis", value=date.today())
-    macro_metrics, category_metrics = fetch_daily_metrics(analysis_date)
+    macro_metrics, package_metrics = fetch_daily_metrics(analysis_date, catalog)
 
-    st.caption("Data makro-ekonomi yang berlaku untuk seluruh kategori pada tanggal terpilih.")
+    event_label = holiday_name_for_date(analysis_date, macro_metrics["monthly_event_days"])
+    st.caption("Data makro-ekonomi yang berlaku untuk seluruh paket pada tanggal terpilih.")
     macro_cols = st.columns(4)
     macro_cols[0].metric("Total Visitors", f"{macro_metrics['total_visitors']:,.0f}")
-    macro_cols[1].metric("Monthly Event Days", f"{macro_metrics['monthly_event_days']:,.0f}")
+    macro_cols[1].metric(
+        "Monthly Event Days",
+        f"{macro_metrics['monthly_event_days']:,.0f}",
+        help=f"Periode: {event_label}",
+    )
     macro_cols[2].metric("Temperature (°C)", f"{macro_metrics['temperature_celsius']:.1f}")
     macro_cols[3].metric("Precipitation (mm)", f"{macro_metrics['prcp_mm']:.1f}")
 
-    st.caption("Metrik kompetitor per kategori diambil otomatis dari sistem monitoring.")
-    st.dataframe(
-        pd.DataFrame.from_dict(category_metrics, orient="index"),
-        use_container_width=True,
-    )
+    st.caption("Metrik kompetitor per paket diambil otomatis dari sistem monitoring.")
 
     category = st.selectbox("Pilih Kategori", options=CATEGORIES)
     service_options = (
@@ -182,16 +239,26 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
 
     package_name = st.selectbox("Pilih Package", options=package_options["package_name"].tolist())
     selection = package_options.loc[package_options["package_name"] == package_name].iloc[0]
+    package_data = package_metrics.get(selection["package_key"], {})
 
     st.info(
-        f"Kategori paket: **{selection['category']}** — Harga dasar historis: ``{selection['base_price_idr']:,}``"
+        f"**{selection['service_name']} — {selection['package_name']}** (Kategori: {selection['category']})",
+    )
+    base_price = float(selection["base_price_idr"])
+    package_cols = st.columns(3)
+    package_cols[0].metric("Harga Dasar", format_rupiah(base_price))
+    package_cols[1].metric(
+        "Harga Kompetitif", format_rupiah(package_data.get("competitive_price", base_price))
+    )
+    package_cols[2].metric(
+        "Jumlah Kompetitor", f"{package_data.get('competitor_count', 0):.0f}",
     )
 
     record = {
         "category": category,
-        "competitive_price": category_metrics[category]["competitive_price"],
-        "competitor_count": category_metrics[category]["competitor_count"],
-        "category_quantity": category_metrics[category]["category_quantity"],
+        "competitive_price": package_data.get("competitive_price", base_price),
+        "competitor_count": package_data.get("competitor_count", 0),
+        "category_quantity": package_data.get("category_quantity", 0),
         "total_visitors": macro_metrics["total_visitors"],
         "monthly_event_days": macro_metrics["monthly_event_days"],
         "temperature_celsius": macro_metrics["temperature_celsius"],
@@ -201,19 +268,24 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
 
     st.success("Rekomendasi harga real-time siap digunakan.")
     delta_vs_competitor = prediction - record["competitive_price"]
-    st.metric("Harga Rekomendasi Hari Ini (IDR)", f"{prediction:,.0f}", f"{delta_vs_competitor:,.0f} vs kompetitor")
+    st.metric(
+        "Harga Rekomendasi Hari Ini",
+        format_rupiah(prediction),
+        f"{format_rupiah(delta_vs_competitor)} vs kompetitor",
+    )
 
     st.markdown("### Prediksi Beberapa Hari ke Depan")
     horizon = st.slider("Jumlah hari ke depan", min_value=1, max_value=7, value=3)
     future_rows: List[Dict[str, float]] = []
     for offset in range(1, horizon + 1):
         forecast_date = analysis_date + timedelta(days=offset)
-        future_macro, future_category_metrics = fetch_daily_metrics(forecast_date)
+        future_macro, future_package_metrics = fetch_daily_metrics(forecast_date, catalog)
+        future_package_data = future_package_metrics.get(selection["package_key"], package_data)
         future_record = {
             "category": category,
-            "competitive_price": future_category_metrics[category]["competitive_price"],
-            "competitor_count": future_category_metrics[category]["competitor_count"],
-            "category_quantity": future_category_metrics[category]["category_quantity"],
+            "competitive_price": future_package_data.get("competitive_price", base_price),
+            "competitor_count": future_package_data.get("competitor_count", 0),
+            "category_quantity": future_package_data.get("category_quantity", 0),
             "total_visitors": future_macro["total_visitors"],
             "monthly_event_days": future_macro["monthly_event_days"],
             "temperature_celsius": future_macro["temperature_celsius"],
@@ -222,16 +294,38 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
         future_price = float(predict_prices(model, [future_record])[0])
         future_rows.append(
             {
-                "date": forecast_date,
-                "recommended_price": future_price,
-                "delta_vs_competitor": future_price - future_record["competitive_price"],
+                "Tanggal": forecast_date,
+                "Periode Event": holiday_name_for_date(
+                    forecast_date, future_macro["monthly_event_days"]
+                ),
+                "Harga Rekomendasi": format_rupiah(future_price),
+                "Selisih vs Kompetitor": format_rupiah(
+                    future_price - future_record["competitive_price"]
+                ),
             }
         )
 
     st.dataframe(pd.DataFrame(future_rows), use_container_width=True)
 
     st.markdown("### Detail Fitur Hari Ini")
-    st.dataframe(pd.DataFrame([record]), use_container_width=True)
+    detail_frame = pd.DataFrame(
+        [
+            {
+                "Faktor": "Harga Kompetitif",
+                "Nilai": format_rupiah(record["competitive_price"]),
+            },
+            {"Faktor": "Jumlah Kompetitor", "Nilai": f"{record['competitor_count']:.0f}"},
+            {"Faktor": "Perkiraan Inventory", "Nilai": f"{record['category_quantity']:.0f}"},
+            {"Faktor": "Total Visitors", "Nilai": f"{record['total_visitors']:,.0f}"},
+            {
+                "Faktor": "Monthly Event Days",
+                "Nilai": f"{record['monthly_event_days']:.0f} ({event_label})",
+            },
+            {"Faktor": "Temperature", "Nilai": f"{record['temperature_celsius']:.1f} °C"},
+            {"Faktor": "Precipitation", "Nilai": f"{record['prcp_mm']:.1f} mm"},
+        ]
+    )
+    st.dataframe(detail_frame, use_container_width=True, hide_index=True)
 
 
 def render_forecast_page(model, catalog: pd.DataFrame) -> None:
@@ -244,7 +338,7 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
     )
 
     forecast_date = st.date_input("Tanggal Prediksi", value=date.today())
-    macro_metrics, category_metrics = fetch_daily_metrics(forecast_date)
+    macro_metrics, package_metrics = fetch_daily_metrics(forecast_date, catalog)
 
     st.subheader("Faktor Makro Harian")
     macro_cols = st.columns(4)
@@ -253,21 +347,25 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
     macro_cols[2].metric("Temperature (°C)", f"{macro_metrics['temperature_celsius']:.1f}")
     macro_cols[3].metric("Precipitation (mm)", f"{macro_metrics['prcp_mm']:.1f}")
 
-    st.subheader("Metrik per Kategori")
-    st.caption("Nilai otomatis per kategori (tidak perlu input manual).")
-    st.dataframe(pd.DataFrame.from_dict(category_metrics, orient="index"), use_container_width=True)
+    st.subheader("Metrik per Paket")
+    st.caption("Nilai otomatis per paket (tidak perlu input manual).")
+    st.dataframe(
+        pd.DataFrame.from_dict(package_metrics, orient="index"),
+        use_container_width=True,
+    )
 
     if st.button("Generate Forecast"):
         records: List[Dict[str, float]] = []
         result_rows: List[Dict[str, float]] = []
         for _, svc in catalog.iterrows():
             category = svc["category"]
-            category_data = category_metrics[category]
+            pkg_key = svc["package_key"]
+            pkg_data = package_metrics.get(pkg_key, {})
             record = {
                 "category": category,
-                "competitive_price": category_data["competitive_price"],
-                "competitor_count": category_data["competitor_count"],
-                "category_quantity": category_data["category_quantity"],
+                "competitive_price": pkg_data.get("competitive_price", svc["base_price_idr"]),
+                "competitor_count": pkg_data.get("competitor_count", 0),
+                "category_quantity": pkg_data.get("category_quantity", 0),
                 "total_visitors": macro_metrics["total_visitors"],
                 "monthly_event_days": macro_metrics["monthly_event_days"],
                 "temperature_celsius": macro_metrics["temperature_celsius"],
@@ -277,21 +375,49 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
             result_rows.append(
                 {
                     "date": forecast_date,
+                    "service_id": svc["service_id"],
                     "service_name": svc["service_name"],
                     "package_name": svc["package_name"],
                     "category": category,
-                    "base_price_idr": svc["base_price_idr"],
+                    "base_price_idr": float(svc["base_price_idr"]),
+                    "package_key": pkg_key,
                 }
             )
 
         predictions = predict_prices(model, records)
-        for idx, price in enumerate(predictions):
-            result_rows[idx]["recommended_price"] = float(price)
-            result_rows[idx]["delta_vs_base"] = float(price) - float(result_rows[idx]["base_price_idr"])
-
         result_df = pd.DataFrame(result_rows)
+        result_df["recommended_price"] = predictions.astype(float)
+
+        # Enforce intuitive ordering so premium packages stay above entry-level ones
+        for service_id, idx_list in result_df.groupby("service_id").groups.items():
+            group_idx = list(idx_list)
+            ordered_group = result_df.loc[group_idx].sort_values("base_price_idr")
+            prev_price = 0.0
+            for idx in ordered_group.index:
+                raw_price = result_df.at[idx, "recommended_price"]
+                adjusted_price = max(raw_price, result_df.at[idx, "base_price_idr"], prev_price)
+                result_df.at[idx, "recommended_price"] = adjusted_price
+                prev_price = adjusted_price
+
+        result_df["delta_vs_base"] = result_df["recommended_price"] - result_df["base_price_idr"]
+
+        display_df = result_df[
+            [
+                "date",
+                "service_name",
+                "package_name",
+                "category",
+                "base_price_idr",
+                "recommended_price",
+                "delta_vs_base",
+            ]
+        ].copy()
+        display_df["base_price_idr"] = display_df["base_price_idr"].apply(format_rupiah)
+        display_df["recommended_price"] = display_df["recommended_price"].apply(format_rupiah)
+        display_df["delta_vs_base"] = display_df["delta_vs_base"].apply(format_rupiah)
+
         st.success("Forecast harian berhasil dibuat.")
-        st.dataframe(result_df, use_container_width=True)
+        st.dataframe(display_df, use_container_width=True)
 
         summary = (
             result_df.groupby("category")["recommended_price"].agg(["count", "mean", "min", "max"]).rename(columns={
@@ -301,6 +427,9 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
                 "max": "harga_maksimum",
             })
         )
+        summary[["harga_rata_rata", "harga_minimum", "harga_maksimum"]] = summary[
+            ["harga_rata_rata", "harga_minimum", "harga_maksimum"]
+        ].applymap(format_rupiah)
         st.markdown("### Ringkasan per Kategori")
         st.dataframe(summary, use_container_width=True)
 
