@@ -498,10 +498,24 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
 
     st.subheader("Metrik per Paket")
     st.caption("Nilai otomatis per paket (tidak perlu input manual).")
-    st.dataframe(
-        pd.DataFrame.from_dict(package_metrics, orient="index"),
-        use_container_width=True,
+    metrics_df = pd.DataFrame.from_dict(package_metrics, orient="index").reset_index()
+    metrics_df = metrics_df.rename(columns={"index": "package_key"})
+    metrics_df[["product_id", "product_name"]] = metrics_df["package_key"].str.split(
+        "::", n=1, expand=True
     )
+    service_lookup = catalog.set_index("service_id")["service_name"].to_dict()
+    metrics_df["service_name"] = metrics_df["product_id"].map(service_lookup)
+    metrics_df = metrics_df[
+        [
+            "product_id",
+            "product_name",
+            "service_name",
+            "competitive_price",
+            "competitor_count",
+            "category_quantity",
+        ]
+    ]
+    st.dataframe(metrics_df, use_container_width=True)
 
     if st.button("Generate Forecast"):
         records: List[Dict[str, float]] = []
@@ -581,6 +595,19 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
         ].applymap(format_rupiah)
         st.markdown("### Ringkasan per Kategori")
         st.dataframe(summary, use_container_width=True)
+
+        st.markdown("### Visualisasi Forecast Harga")
+        chart_df = result_df.copy()
+        chart_df["Produk"] = chart_df["service_name"] + " — " + chart_df["package_name"]
+        forecast_chart = px.bar(
+            chart_df.sort_values("recommended_price", ascending=False),
+            x="Produk",
+            y="recommended_price",
+            color="category",
+            labels={"recommended_price": "Harga Rekomendasi (Rp)"},
+        )
+        forecast_chart.update_layout(xaxis_tickangle=-35)
+        st.plotly_chart(forecast_chart, use_container_width=True)
 
         csv = result_df.to_csv(index=False).encode("utf-8")
         st.download_button(
