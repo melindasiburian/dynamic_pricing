@@ -380,55 +380,6 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
     demand_fig.update_layout(yaxis_title="Relative Demand", xaxis_title="Days")
     performance_cols[1].plotly_chart(demand_fig, use_container_width=True)
 
-    st.markdown("### Prediksi Beberapa Hari ke Depan")
-    horizon = st.slider("Jumlah hari ke depan", min_value=1, max_value=7, value=3)
-    future_table_rows: List[Dict[str, str]] = []
-    future_chart_rows: List[Dict[str, float]] = []
-    for offset in range(1, horizon + 1):
-        forecast_date = analysis_date + timedelta(days=offset)
-        future_macro, future_package_metrics = fetch_daily_metrics(forecast_date, catalog)
-        future_package_data = future_package_metrics.get(selection["package_key"], package_data)
-        future_record = {
-            "category": category,
-            "competitive_price": future_package_data.get("competitive_price", base_price),
-            "competitor_count": future_package_data.get("competitor_count", 0),
-            "category_quantity": future_package_data.get("category_quantity", 0),
-            "total_visitors": future_macro["total_visitors"],
-            "monthly_event_days": future_macro["monthly_event_days"],
-            "temperature_celsius": future_macro["temperature_celsius"],
-            "prcp_mm": future_macro["prcp_mm"],
-        }
-        future_price = float(predict_prices(model, [future_record])[0])
-        future_table_rows.append(
-            {
-                "Tanggal": forecast_date,
-                "Periode Event": holiday_name_for_date(
-                    forecast_date, future_macro["monthly_event_days"]
-                ),
-                "Harga Rekomendasi": format_rupiah(future_price),
-                "Selisih vs Kompetitor": format_rupiah(
-                    future_price - future_record["competitive_price"]
-                ),
-            }
-        )
-        future_chart_rows.append(
-            {
-                "Tanggal": forecast_date,
-                "Harga": future_price,
-            }
-        )
-
-    st.dataframe(pd.DataFrame(future_table_rows), use_container_width=True)
-    if future_chart_rows:
-        seasonal_fig = px.line(
-            pd.DataFrame(future_chart_rows),
-            x="Tanggal",
-            y="Harga",
-            markers=True,
-        )
-        seasonal_fig.update_layout(title="Seasonal Price Trend", yaxis_title="Harga (Rp)")
-        st.plotly_chart(seasonal_fig, use_container_width=True)
-
     st.markdown("### Detail Fitur Hari Ini")
     detail_frame = pd.DataFrame(
         [
@@ -496,12 +447,101 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
     macro_cols[2].metric("Temperature (°C)", f"{macro_metrics['temperature_celsius']:.1f}")
     macro_cols[3].metric("Precipitation (mm)", f"{macro_metrics['prcp_mm']:.1f}")
 
+    st.markdown("### Prediksi Beberapa Hari ke Depan untuk Paket Terpilih")
+    category_options = sorted(catalog["category"].unique())
+    if not category_options:
+        st.info("Katalog paket belum tersedia untuk melakukan prediksi multi-hari.")
+    else:
+        selected_category = st.selectbox("Pilih Kategori Paket", options=category_options)
+        package_choices = catalog.loc[catalog["category"] == selected_category].sort_values(
+            ["service_name", "package_name"]
+        )
+        if not package_choices.empty:
+            service_choice = st.selectbox(
+                "Pilih Service", options=package_choices["service_name"].unique().tolist()
+            )
+            package_choice = st.selectbox(
+                "Pilih Package",
+                options=package_choices.loc[
+                    package_choices["service_name"] == service_choice, "package_name"
+                ],
+            )
+            selected_pkg = package_choices.loc[
+                (package_choices["service_name"] == service_choice)
+                & (package_choices["package_name"] == package_choice)
+            ].iloc[0]
+            base_price = float(selected_pkg["base_price_idr"])
+            package_data = package_metrics.get(selected_pkg["package_key"], {})
+
+            horizon = st.slider(
+                "Jumlah hari ke depan", min_value=1, max_value=7, value=3, key="forecast_horizon"
+            )
+            future_table_rows: List[Dict[str, str]] = []
+            future_chart_rows: List[Dict[str, float]] = []
+            for offset in range(1, horizon + 1):
+                horizon_date = forecast_date + timedelta(days=offset)
+                future_macro, future_package_metrics = fetch_daily_metrics(horizon_date, catalog)
+                future_package_data = future_package_metrics.get(
+                    selected_pkg["package_key"], package_data
+                )
+                future_record = {
+                    "category": selected_pkg["category"],
+                    "competitive_price": future_package_data.get("competitive_price", base_price),
+                    "competitor_count": future_package_data.get("competitor_count", 0),
+                    "category_quantity": future_package_data.get("category_quantity", 0),
+                    "total_visitors": future_macro["total_visitors"],
+                    "monthly_event_days": future_macro["monthly_event_days"],
+                    "temperature_celsius": future_macro["temperature_celsius"],
+                    "prcp_mm": future_macro["prcp_mm"],
+                }
+                future_price = float(predict_prices(model, [future_record])[0])
+                future_table_rows.append(
+                    {
+                        "Tanggal": horizon_date,
+                        "Periode Event": holiday_name_for_date(
+                            horizon_date, future_macro["monthly_event_days"]
+                        ),
+                        "Harga Rekomendasi": format_rupiah(future_price),
+                        "Selisih vs Kompetitor": format_rupiah(
+                            future_price - future_record["competitive_price"]
+                        ),
+                    }
+                )
+                future_chart_rows.append({"Tanggal": horizon_date, "Harga": future_price})
+
+            st.dataframe(pd.DataFrame(future_table_rows), use_container_width=True)
+            if future_chart_rows:
+                seasonal_fig = px.line(
+                    pd.DataFrame(future_chart_rows),
+                    x="Tanggal",
+                    y="Harga",
+                    markers=True,
+                )
+                seasonal_fig.update_layout(title="Seasonal Price Trend", yaxis_title="Harga (Rp)")
+                st.plotly_chart(seasonal_fig, use_container_width=True)
+        else:
+            st.info("Tidak ada paket dalam kategori yang dipilih.")
+
     st.subheader("Metrik per Paket")
     st.caption("Nilai otomatis per paket (tidak perlu input manual).")
-    st.dataframe(
-        pd.DataFrame.from_dict(package_metrics, orient="index"),
-        use_container_width=True,
+    metrics_df = pd.DataFrame.from_dict(package_metrics, orient="index").reset_index()
+    metrics_df = metrics_df.rename(columns={"index": "package_key"})
+    metrics_df[["product_id", "product_name"]] = metrics_df["package_key"].str.split(
+        "::", n=1, expand=True
     )
+    service_lookup = catalog.set_index("service_id")["service_name"].to_dict()
+    metrics_df["service_name"] = metrics_df["product_id"].map(service_lookup)
+    metrics_df = metrics_df[
+        [
+            "product_id",
+            "product_name",
+            "service_name",
+            "competitive_price",
+            "competitor_count",
+            "category_quantity",
+        ]
+    ]
+    st.dataframe(metrics_df, use_container_width=True)
 
     if st.button("Generate Forecast"):
         records: List[Dict[str, float]] = []
@@ -581,6 +621,19 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
         ].applymap(format_rupiah)
         st.markdown("### Ringkasan per Kategori")
         st.dataframe(summary, use_container_width=True)
+
+        st.markdown("### Visualisasi Forecast Harga")
+        chart_df = result_df.copy()
+        chart_df["Produk"] = chart_df["service_name"] + " — " + chart_df["package_name"]
+        forecast_chart = px.bar(
+            chart_df.sort_values("recommended_price", ascending=False),
+            x="Produk",
+            y="recommended_price",
+            color="category",
+            labels={"recommended_price": "Harga Rekomendasi (Rp)"},
+        )
+        forecast_chart.update_layout(xaxis_tickangle=-35)
+        st.plotly_chart(forecast_chart, use_container_width=True)
 
         csv = result_df.to_csv(index=False).encode("utf-8")
         st.download_button(
