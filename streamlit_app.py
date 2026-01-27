@@ -40,6 +40,10 @@ def load_service_catalog() -> pd.DataFrame:
         )
     catalog = pd.read_csv(SERVICE_CATALOG_PATH)
     catalog.columns = [col.strip() for col in catalog.columns]
+    catalog["base_price_idr"] = pd.to_numeric(catalog["base_price_idr"], errors="coerce")
+    # Normalise price signal across services so we can scale category-level predictions later.
+    category_avg = catalog.groupby("category")["base_price_idr"].transform("mean").replace(0, np.nan)
+    catalog["price_factor"] = (catalog["base_price_idr"] / category_avg).fillna(1.0)
     return catalog
 
 
@@ -132,8 +136,15 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
     package_name = st.selectbox("Pilih Package", options=package_options["package_name"].tolist())
     selection = package_options.loc[package_options["package_name"] == package_name].iloc[0]
 
+    category_avg_price = float(
+        catalog.loc[catalog["category"] == category, "base_price_idr"].mean()
+    )
     st.info(
-        f"Kategori paket: **{selection['category']}** — Harga dasar historis: ``{selection['base_price_idr']:,}``"
+        "Kategori paket: **{}** — Harga dasar historis: ``{:,.0f}`` (rerata kategori: ``{:,.0f}``)".format(
+            selection["category"],
+            selection["base_price_idr"],
+            category_avg_price,
+        )
     )
 
     record = {
@@ -146,7 +157,9 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
         "temperature_celsius": macro_metrics["temperature_celsius"],
         "prcp_mm": macro_metrics["prcp_mm"],
     }
-    prediction = float(predict_prices(model, [record])[0])
+    # Adjust the category-level prediction to reflect the specific service/package baseline.
+    category_prediction = float(predict_prices(model, [record])[0])
+    prediction = category_prediction * float(selection["price_factor"])
 
     st.success("Rekomendasi harga real-time siap digunakan.")
     delta_vs_competitor = prediction - record["competitive_price"]
@@ -168,7 +181,8 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
             "temperature_celsius": future_macro["temperature_celsius"],
             "prcp_mm": future_macro["prcp_mm"],
         }
-        future_price = float(predict_prices(model, [future_record])[0])
+        future_category_price = float(predict_prices(model, [future_record])[0])
+        future_price = future_category_price * float(selection["price_factor"])
         future_rows.append(
             {
                 "date": forecast_date,
@@ -208,6 +222,7 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
     if st.button("Generate Forecast"):
         records: List[Dict[str, float]] = []
         result_rows: List[Dict[str, float]] = []
+        price_factors: List[float] = []
         for _, svc in catalog.iterrows():
             category = svc["category"]
             category_data = category_metrics[category]
@@ -222,6 +237,7 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
                 "prcp_mm": macro_metrics["prcp_mm"],
             }
             records.append(record)
+            price_factors.append(float(svc.get("price_factor", 1.0)))
             result_rows.append(
                 {
                     "date": forecast_date,
@@ -234,8 +250,10 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
 
         predictions = predict_prices(model, records)
         for idx, price in enumerate(predictions):
-            result_rows[idx]["recommended_price"] = float(price)
-            result_rows[idx]["delta_vs_base"] = float(price) - float(result_rows[idx]["base_price_idr"])
+            adjusted_price = float(price) * price_factors[idx]
+            base_price = float(result_rows[idx]["base_price_idr"])
+            result_rows[idx]["recommended_price"] = adjusted_price
+            result_rows[idx]["delta_vs_base"] = adjusted_price - base_price
 
         result_df = pd.DataFrame(result_rows)
         st.success("Forecast harian berhasil dibuat.")
