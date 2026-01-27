@@ -1,13 +1,15 @@
 """Streamlit dashboard for daily price recommendations and forecasts."""
 from __future__ import annotations
 
+import os
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import joblib
 import numpy as np
 import pandas as pd
+import requests
 import streamlit as st
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -17,6 +19,7 @@ MODEL_CANDIDATES: List[Path] = [
     PROJECT_DIR / "artifacts" / "dynamic_pricing_model.joblib",
 ]
 CATEGORIES = ["entertainment", "experience", "rental", "in_room_service"]
+REALTIME_API_URL_ENV = "REALTIME_METRICS_API_URL"
 
 
 @st.cache_resource(show_spinner=False)
@@ -43,9 +46,8 @@ def load_service_catalog() -> pd.DataFrame:
     return catalog
 
 
-@st.cache_data(show_spinner=False)
-def fetch_daily_metrics(target_date: date) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
-    """Simulate real-time metrics retrieved from an external API."""
+def _generate_dummy_metrics(target_date: date) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
+    """Generate deterministic pseudo-random metrics for demo use."""
 
     rng = np.random.default_rng(int(target_date.strftime("%Y%m%d")))
     macro_metrics = {
@@ -64,6 +66,55 @@ def fetch_daily_metrics(target_date: date) -> Tuple[Dict[str, float], Dict[str, 
         }
 
     return macro_metrics, category_metrics
+
+
+def _fetch_metrics_from_api(target_date: date) -> Optional[Tuple[Dict[str, float], Dict[str, Dict[str, float]]]]:
+    """Retrieve metrics from a real API when configured via environment variable.
+
+    The expected JSON shape is:
+
+    ```json
+    {
+        "macro": {"total_visitors": 123, "monthly_event_days": 3, ...},
+        "category": {
+            "entertainment": {"competitive_price": 1, "competitor_count": 2, "category_quantity": 3},
+            ...
+        }
+    }
+    ```
+    """
+
+    api_url = os.getenv(REALTIME_API_URL_ENV)
+    if not api_url:
+        return None
+
+    try:
+        response = requests.get(api_url, params={"date": target_date.isoformat()}, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException as exc:  # pragma: no cover - network dependent
+        st.warning(f"Gagal mengambil data real-time dari API ({exc}). Menggunakan data simulasi.")
+        return None
+
+    payload = response.json()
+    macro = payload.get("macro") or {}
+    category = payload.get("category") or {}
+
+    if not macro or not category:
+        st.warning("Respons API tidak lengkap. Menggunakan data simulasi.")
+        return None
+
+    return macro, category
+
+
+@st.cache_data(show_spinner=False)
+def fetch_daily_metrics(target_date: date) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
+    """Return metrics from a real API when available, otherwise deterministic dummy data."""
+
+    api_metrics = _fetch_metrics_from_api(target_date)
+    if api_metrics:
+        return api_metrics
+
+    return _generate_dummy_metrics(target_date)
 
 
 def make_feature_frame(records: List[Dict[str, float]]) -> pd.DataFrame:
@@ -92,8 +143,8 @@ def render_recommendation_page(model, catalog: pd.DataFrame) -> None:
     """Display the single-package recommendation experience."""
     st.header("Sistem Rekomendasi Harga Harian")
     st.markdown(
-        "Data operasional harian diambil secara otomatis dari layanan internal (simulasi API). "
-        "Pilih kategori, layanan, dan paket untuk melihat rekomendasi harga terbaru."
+        "Data operasional harian diambil otomatis dari API real-time bila ``REALTIME_METRICS_API_URL`` "
+        "diisi. Jika API belum tersedia, sistem otomatis menggunakan data simulasi yang terkontrol."
     )
 
     analysis_date = st.date_input("Tanggal Analisis", value=date.today())
@@ -187,8 +238,9 @@ def render_forecast_page(model, catalog: pd.DataFrame) -> None:
     """Display the bulk forecasting page."""
     st.header("Forecasting Harga Harian untuk Seluruh Paket")
     st.markdown(
-        "Semua metrik harian diambil secara otomatis dari simulasi API internal sehingga tim pricing "
-        "cukup memilih tanggal yang diinginkan."
+        "Semua metrik harian diambil otomatis dari API real-time (jika ``REALTIME_METRICS_API_URL`` "
+        "diisi) atau fallback ke simulasi internal sehingga tim pricing cukup memilih tanggal yang "
+        "diinginkan."
     )
 
     forecast_date = st.date_input("Tanggal Prediksi", value=date.today())
